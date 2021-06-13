@@ -1,10 +1,8 @@
 from fastapi import FastAPI, Depends, Response, status, HTTPException
-from fastapi.param_functions import Body
+from sqlalchemy.sql.functions import user
 from . import schemas, models
 from .database import engine, SessionLocal
 from sqlalchemy.orm import Session
-
-import blog
 
 app = FastAPI()
 
@@ -43,7 +41,8 @@ def update(id, blog:schemas.Blog, db: Session = Depends(get_db)):
     db.commit()
     return 'updated'
 
-@app.get('/blog')
+
+@app.get('/blog', status_code=status.HTTP_200_OK)
 def all(db: Session = Depends(get_db)):
     blogs = db.query(models.Blog).all()
     return blogs
@@ -56,3 +55,13 @@ def show(id, response: Response, db: Session = Depends(get_db)):
         # return {'Error': f'Blog with id {id} is not available'}
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Blog with id {id} is not available')
     return blog
+
+#########################################################################################################################
+
+@app.post('/user', status_code=status.HTTP_201_CREATED)
+def createUser(user: schemas.User, db: Session = Depends(get_db)):
+    newUser = models.User(name=user.name, email=user.email, password=user.password)
+    db.add(newUser)
+    db.commit()
+    db.refresh(newUser)
+    return newUser
