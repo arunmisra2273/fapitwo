@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Depends, Response, status, HTTPException
-from sqlalchemy.sql.functions import user
-from . import schemas, models
+from . import schemas, models, hashy
 from .database import engine, SessionLocal
 from sqlalchemy.orm import Session
 
@@ -60,8 +59,23 @@ def show(id, response: Response, db: Session = Depends(get_db)):
 
 @app.post('/user', status_code=status.HTTP_201_CREATED)
 def createUser(user: schemas.User, db: Session = Depends(get_db)):
-    newUser = models.User(name=user.name, email=user.email, password=user.password)
+    newUser = models.User(name=user.name, email=user.email, password=hashy.Hashy.bashy(user.password))
     db.add(newUser)
     db.commit()
     db.refresh(newUser)
     return newUser
+
+
+@app.get('/user', status_code=status.HTTP_200_OK)
+def all(db: Session = Depends(get_db)):
+    users = db.query(models.User).all()
+    return users
+
+
+@app.get('/user/{id}', status_code=status.HTTP_200_OK)
+def show(id, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f'user with id {id} is not available')
+    return user
